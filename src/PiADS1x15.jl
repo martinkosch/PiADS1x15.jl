@@ -165,7 +165,7 @@ Set the low or high (see boolean `write_low_thld`) comperator alert threshold to
 Use function [`enable_conv_rdy_alert`](@ref) in order to enable a alert pin changes on newly available conversion results.
 """
 function set_threshold_alert(pi::Pi, ads::ADS1x15, thld_value::Number, write_low_thld::Bool=true)
-  register = write_low_thld ? UInt16(ADS1x15_POINTER_LOWTHRESH : UInt16(ADS1x15_POINTER_HITHRESH)
+  register = write_low_thld ? UInt16(ADS1x15_POINTER_LOWTHRESH) : UInt16(ADS1x15_POINTER_HITHRESH)
   return write_register(pi, ads, register, thld_value << ads.bit_shift)
 end
 
