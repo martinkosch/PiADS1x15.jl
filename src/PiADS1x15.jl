@@ -104,12 +104,12 @@ mutable struct ADS1115 <: ADS1x15
 end
 
 function ADS1015(pi::Pi, i2c_bus::Integer, i2c_address::ADS1x15_Address)
-  handle = PiGPIO.i2c_open(pi, i2c_bus, i2c_address)
+  handle = PiGPIO.i2c_open(pi, i2c_bus, UInt16(i2c_address))
   return ADS1015(handle, i2c_address, 1//1000, 4)
 end
 
 function ADS1115(pi::Pi, i2c_bus::Integer, i2c_address::ADS1x15_Address)
-  handle = PiGPIO.i2c_open(pi, i2c_bus, i2c_address)
+  handle = PiGPIO.i2c_open(pi, i2c_bus, UInt16(i2c_address))
   return ADS1115(handle, i2c_address, 9//1000, 0)
 end
 
@@ -146,12 +146,12 @@ function set_and_read_ADS1x15(pi::Pi, ads::ADS1x15, os::ADS1x15_Config_OS=OS_STR
   comp_lat::ADS1x15_Config_COMPLAT=COMPLAT_NONLAT,
   comp_que::ADS1x15_Config_COMPQUE=COMPQUE_NONE)
 
-  config = os | mux | pga | mode | dr | comp_mode | comp_pol | comp_lat | comp_que
-  write_register(pi, ads, ADS1x15_POINTER_CONFIG, config)
+  config = UInt16(os) | UInt16(mux) | UInt16(pga) | UInt16(mode) | UInt16(dr) | UInt16(comp_mode) | UInt16(comp_pol) | UInt16(comp_lat) | UInt16(comp_que)
+  write_register(pi, ads, UInt16(ADS1x15_POINTER_CONFIG), config)
 
   sleep(ads.conversion_delay)
 
-  result = read_register(pi, ads, ADS1x15_POINTER_CONVERT) >> ads.bit_shift
+  result = read_register(pi, ads, UInt16(ADS1x15_POINTER_CONVERT)) >> ads.bit_shift
   if ads.bit_shift != 0 && mux <= 0x3000 && result > 0x07FF
     result |= 0xF000 # Move sign to 16th bit in case of negative differential values
   end
@@ -165,7 +165,7 @@ Set the low or high (see boolean `write_low_thld`) comperator alert threshold to
 Use function [`enable_conv_rdy_alert`](@ref) in order to enable a alert pin changes on newly available conversion results.
 """
 function set_threshold_alert(pi::Pi, ads::ADS1x15, thld_value::Number, write_low_thld::Bool=true)
-  register = write_low_thld ? ADS1x15_POINTER_LOWTHRESH : ADS1x15_POINTER_HITHRESH
+  register = write_low_thld ? UInt16(ADS1x15_POINTER_LOWTHRESH : UInt16(ADS1x15_POINTER_HITHRESH)
   return write_register(pi, ads, register, thld_value << ads.bit_shift)
 end
 
@@ -175,8 +175,8 @@ end
 Enable alert pin changes on newly available conversion results.
 """
 function enable_conv_rdy_alert(pi::Pi, ads::ADS1x15)
-  write_register(pi, ads, ADS1x15_POINTER_LOWTHRESH, 0x800)
-  write_register(pi, ads, ADS1x15_POINTER_HITHRESH, 0x7ff)
+  write_register(pi, ads, UInt16(ADS1x15_POINTER_LOWTHRESH), 0x800)
+  write_register(pi, ads, UInt16(ADS1x15_POINTER_HITHRESH), 0x7ff)
 end
 
 """
@@ -186,7 +186,7 @@ Check if ADC is currenty performing a measurement.
 """
 function is_busy(pi::Pi, ads::ADS1x15)
   os_mask = 0x8000
-  return read_register(pi, ads, ADS1x15_POINTER_CONFIG) & os_mask == OS_BUSY
+  return read_register(pi, ads, UInt16(ADS1x15_POINTER_CONFIG)) & os_mask == UInt16(OS_BUSY)
 end
 
 end #module
