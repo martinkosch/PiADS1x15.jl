@@ -24,7 +24,7 @@ const pointers = Dict(
 # Config register
 const config_os = Dict(
   :MASK_OS => 0x8000,
-  :STRTSINGLE => 0x8000, # Write: Start a single-conversion
+  :STARTSINGLE => 0x8000, # Write: Start a single-conversion
   :BUSY => 0x0000, # Read: Device is currently performing a conversion
   :NOTBUSY => 0x8000 # Read: Device is in idle mode
 )
