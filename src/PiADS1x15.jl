@@ -206,6 +206,53 @@ function read_conv_result(pi::Pi, ads::ADS1x15)
 end
 
 """
+  read_config(pi, ads)
+
+Read the current config register from an ADS1x15 device connected to a Raspberry Pi via a PiGPIO.jl object `pi`.
+"""
+function read_config(pi::Pi, ads::ADS1x15)
+  global pointers
+  global config_os
+  global config_mux
+  global config_pga
+  global config_mode
+  global config_dr
+  global config_compmode
+  global config_comppol
+  global config_complat
+  global config_compque
+  global current_config
+
+  res = read_register(pi, ads, pointers[:CONFIG])
+  if res != 0
+    current_config = res
+    if field == :NONE
+      return current_config
+    elseif field == :OS
+      return current_config & config_os[:MASK_OS]
+    elseif field == :MUX
+      return current_config & config_mux[:MASK_MUX]
+    elseif field == :PGA
+      return current_config & config_pga[:MASK_PGA]
+    elseif field == :MODE
+      return current_config & config_mode[:MASK_MODE]
+    elseif field == :DR
+      return current_config & config_dr[:MASK_DR]
+    elseif field == :COMPMODE
+      return current_config & config_compmode[:MASK_COMPMODE]
+    elseif field == :COMPPOL
+      return current_config & config_comppol[:MASK_COMPPOL]
+    elseif field == :COMPLAT
+      return current_config & config_complat[:MASK_COMPLAT]
+    elseif field == :COMPQUE
+      return current_config & config_compque[:MASK_COMPQUE]
+    else
+      error("Unknown field $field.")
+    end
+  end
+end
+
+"""
   set_threshold_ADS1x15(pi, ads, thld_value[, write_low_thld])
 
 Set the low or high (see boolean `write_low_thld`) comperator alert threshold to a specific digital value `thld_value`.
