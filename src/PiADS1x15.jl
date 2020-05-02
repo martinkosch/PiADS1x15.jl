@@ -130,7 +130,7 @@ end
 Write a 16-bits `value` to the specified destination `register`.
 """
 function write_register(pi::Pi, ads::ADS1x15, register::Number, value::Number)
-  return PiGPIO.i2c_write_word_data(pi, ads.i2c_handle, UInt8(register), UInt16(value))
+  return PiGPIO.i2c_write_word_data(pi, ads.handle, UInt8(register), UInt16(value))
 end
 
 """
@@ -139,7 +139,7 @@ end
 Read 16-bits from the specified destination `register`.
 """
 function read_register(pi::Pi, ads::ADS1x15, register::Number)
-  return PiGPIO.i2c_read_word_data(pi, ads.i2c_handle, UInt8(register))
+  return PiGPIO.i2c_read_word_data(pi, ads.handle, UInt8(register))
 end
 
 """
@@ -154,9 +154,9 @@ function set_config(pi::Pi, ads::ADS1x15;
   pga::Symbol=:V2_048,
   mode::Symbol=:SINGLE,
   dr::Symbol=:SPS1600,
-  compmode::Symbol=:TRAD,
+  compmode::Symbol=:TRADITIONAL,
   comppol::Symbol=:ACTIVELOW,
-  complat::Symbol=:NONLAT,
+  complat::Symbol=:NONLATCH,
   compque::Symbol=:NONE)
 
   global pointers
