@@ -2,90 +2,97 @@ module PiADS1x15
 
 using PiGPIO
 
-export ADS1x15_Address, ADS1x15_Pointer, ADS1x15_Config_OS, ADS1x15_Config_MUX,
-ADS1x15_Config_PGA, ADS1x15_Config_MODE, ADS1x15_Config_DR, ADS1x15_Config_COMPMODE,
-ADS1x15_Config_COMPPOL, ADS1x15_Config_COMPLAT, ADS1x15_Config_COMPQUE
 export ADS1015, ADS1115
 export set_and_read_ADS1x15, set_threshold_alert, enable_conv_rdy_alert, is_busy
 
 # I2C Addresses
-@enum ADS1x15_Address begin
-  ADDRESS_GND = 0x48 # I2C address if ADDR pin is connected to GND
-  ADDRESS_VDD = 0x49 # I2C address if ADDR pin is connected to VCC
-  ADDRESS_SDA = 0x4a # I2C address if ADDR pin is connected to SDA
-  ADDRESS_SCL = 0x4b # I2C address if ADDR pin is connected to SCL
-end
+const addresses = Dict(
+  :GND => 0x48, # I2C address if ADDR pin is connected to GND
+  :VDD => 0x49, # I2C address if ADDR pin is connected to VCC
+  :SDA => 0x4a, # I2C address if ADDR pin is connected to SDA
+  :SCL => 0x4b # I2C address if ADDR pin is connected to SCL
+)
 
 # Pointer register
-@enum ADS1x15_Pointer begin
-  POINTER_CONVERT = 0x00 # Conversion register
-  POINTER_CONFIG = 0x01 # Config register
-  POINTER_LOWTHRESH = 0x02 # Low threshold register
-  POINTER_HITHRESH = 0x03 # High threshold register
-end
+const pointers = Dict(
+  :CONVERT => 0x00, # Convert register
+  :CONFIG => 0x01, # Config register
+  :LOWTHRESH => 0x02, # Low threshold register
+  :HITHRESH => 0x03 # High threshold register
+)
 
 # Config register
-@enum ADS1x15_Config_OS begin
-  OS_STRTSINGLE = 0x8000 # Write: Start a single-conversion
-  OS_BUSY = 0x0000 # Read: Device is currently performing a conversion
-end
+const config_os = Dict(
+  :MASK_OS => 0x8000,
+  :STRTSINGLE => 0x8000, # Write: Start a single-conversion
+  :BUSY => 0x0000, # Read: Device is currently performing a conversion
+  :NOTBUSY => 0x8000 # Read: Device is in idle mode
+)
 
-@enum ADS1x15_Config_MUX begin
-  MUX_DIFF_0_1 = 0x0000 # AIN_P = AIN0 and AIN_N = AIN1 (differential, default)
-  MUX_DIFF_0_3 = 0x1000 # AIN_P = AIN0 and AIN_N = AIN3 (differential)
-  MUX_DIFF_1_3 = 0x2000 # AIN_P = AIN1 and AIN_N = AIN3 (differential)
-  MUX_DIFF_2_3 = 0x3000 # AIN_P = AIN2 and AIN_N = AIN3 (differential)
-  MUX_SINGLE_0 = 0x4000 # AIN_P = AIN0 and AIN_N = GND (single-ended)
-  MUX_SINGLE_1 = 0x5000 # AIN_P = AIN1 and AIN_N = GND (single-ended)
-  MUX_SINGLE_2 = 0x6000 # AIN_P = AIN2 and AIN_N = GND (single-ended)
-  MUX_SINGLE_3 = 0x7000 # AIN_P = AIN3 and AIN_N = GND (single-ended)
-end
+const config_mux = Dict(
+  :MASK_MUX => 0x7000,
+  :DIFF_0_1 => 0x0000, # AIN_P = AIN0 and AIN_N = AIN1 (differential, default)
+  :DIFF_0_3 => 0x1000, # AIN_P = AIN0 and AIN_N = AIN3 (differential)
+  :DIFF_1_3 => 0x2000, # AIN_P = AIN1 and AIN_N = AIN3 (differential)
+  :DIFF_2_3 => 0x3000, # AIN_P = AIN2 and AIN_N = AIN3 (differential)
+  :SINGLE_0 => 0x4000, # AIN_P = AIN0 and AIN_N = GND (single-ended)
+  :SINGLE_1 => 0x5000, # AIN_P = AIN1 and AIN_N = GND (single-ended)
+  :SINGLE_2 => 0x6000, # AIN_P = AIN2 and AIN_N = GND (single-ended)
+  :SINGLE_3 => 0x7000 # AIN_P = AIN3 and AIN_N = GND (single-ended)
+)
 
-@enum ADS1x15_Config_PGA begin
-  PGA_6144V = 0x0000 # +-6.144V range
-  PGA_4_096V = 0x0200 # +-4.096V range
-  PGA_2_048V = 0x0400 # +-2.048V range (default)
-  PGA_1_024V = 0x0600 # +-1.024V range
-  PGA_0_512V = 0x0800 # +-0.512V range
-  PGA_0_256V = 0x0A00 # +-0.256V range
-end
+const config_pga = Dict(
+  :MASK_PGA => 0x0E00,
+  :V6_144 => 0x0000, # +-6.144V range
+  :V4_096 => 0x0200, # +-4.096V range
+  :V2_048 => 0x0400, # +-2.048V range (default)
+  :V1_024 => 0x0600, # +-1.024V range
+  :V0_512 => 0x0800, # +-0.512V range
+  :V0_256 => 0x0A00 # +-0.256V range
+)
 
-@enum ADS1x15_Config_MODE begin
-  MODE_CONTINOUS = 0x0000 # Continuous-conversion mode
-  MODE_SINGLE = 0x0100 # Single-shot mode or power-down state (default)
-end
+const config_mode = Dict(
+  :MASK_MODE => 0x0100,
+  :CONTINOUS => 0x0000, # Continuous-conversion mode
+  :SINGLE => 0x0100 # Single-shot mode or power-down state (default)
+)
 
-@enum ADS1x15_Config_DR begin
-  DR_128SPS = 0x0000 # 128 samples per second
-  DR_250SPS = 0x0020 # 250 samples per second
-  DR_490SPS = 0x0040 # 490 samples per second
-  DR_920SPS = 0x0060 # 920 samples per second
-  DR_1600SPS = 0x0080 # 1600 samples per second (default)
-  DR_2400SPS = 0x00A0 # 2400 samples per second
-  DR_3300SPS = 0x00C0 # 3300 samples per second
-end
+const config_dr = Dict(
+  :MASK_DR => 0x00E0,
+  :SPS128 => 0x0000, # 128 samples per second
+  :SPS250 => 0x0020, # 250 samples per second
+  :SPS490 => 0x0040, # 490 samples per second
+  :SPS920 => 0x0060, # 920 samples per second
+  :SPS1600 => 0x0080, # 1600 samples per second (default)
+  :SPS2400 => 0x00A0, # 2400 samples per second
+  :SPS3300 => 0x00C0 # 3300 samples per second
+)
 
-@enum ADS1x15_Config_COMPMODE begin
-  COMPMODE_TRAD = 0x0000 # Traditional comparator (default)
-  COMPMODE_WINDOW = 0x0010 # Window comparator
-end
+const config_compmode = Dict(
+  :MASK_COMPMODE => 0x0010,
+  :TRADITIONAL => 0x0000, # Traditional comparator (default)
+  :WINDOW => 0x0010 # Window comparator
+)
 
-@enum ADS1x15_Config_COMPPOL begin
-  COMPPOL_ACTIVELOW = 0x0000 # Active low ALERT/RDY pin (default)
-  COMPPOL_ACTIVEHI = 0x0008 # Active high ALERT/RDY pin
-end
+const config_comppol = Dict(
+  :MASK_COMPPOL => 0x0008,
+  :ACTIVELOW => 0x0000, # Active low ALERT/RDY pin (default)
+  :ACTIVEHI => 0x0008 # Active high ALERT/RDY pin
+)
 
-@enum ADS1x15_Config_COMPLAT begin
-  COMPLAT_NONLAT = 0x0000 # Non-latching comparator (default)
-  COMPLAT_LATCH = 0x0004 # Latching comparator
-end
+const config_complat = Dict(
+  :MASK_COMPLAT => 0x0004,
+  :NONLATCH => 0x0000, # Non-latching comparator (default)
+  :LATCH => 0x0004 # Latching comparator
+)
 
-@enum ADS1x15_Config_COMPQUE begin
-  COMPQUE_1CONV = 0x0000 # Assert ALERT/RDY after one conversions
-  COMPQUE_2CONV = 0x0001 # Assert ALERT/RDY after two conversions
-  COMPQUE_4CONV = 0x0002 # Assert ALERT/RDY after four conversions
-  COMPQUE_NONE = 0x0003 # Disable the comparator and put ALERT/RDY to high impedance (default)
-end
+const config_compque = Dict(
+  :MASK_COMPQUE => 0x0003,
+  :CONV1 => 0x0000, # Assert ALERT/RDY after one conversions
+  :CONV2 => 0x0001, # Assert ALERT/RDY after two conversions
+  :CONV4 => 0x0002, # Assert ALERT/RDY after four conversions
+  :NONE => 0x0003 # Disable the comparator and put ALERT/RDY to high impedance (default)
+)
 
 abstract type ADS1x15 end
 
@@ -103,13 +110,15 @@ mutable struct ADS1115 <: ADS1x15
   bit_shift        # Bit shift
 end
 
-function ADS1015(pi::Pi, i2c_bus::Integer, i2c_address::ADS1x15_Address)
-  handle = PiGPIO.i2c_open(pi, i2c_bus, UInt16(i2c_address))
+function ADS1015(pi::Pi, i2c_bus::Integer, i2c_address::Symbol)
+  global addresses
+  handle = PiGPIO.i2c_open(pi, i2c_bus, addresses[i2c_address])
   return ADS1015(handle, i2c_address, 1//1000, 4)
 end
 
-function ADS1115(pi::Pi, i2c_bus::Integer, i2c_address::ADS1x15_Address)
-  handle = PiGPIO.i2c_open(pi, i2c_bus, UInt16(i2c_address))
+function ADS1115(pi::Pi, i2c_bus::Integer, i2c_address::Symbol)
+  global addresses
+  handle = PiGPIO.i2c_open(pi, i2c_bus, addresses[i2c_address])
   return ADS1115(handle, i2c_address, 9//1000, 0)
 end
 
@@ -136,22 +145,34 @@ end
 
 Get a single-ended ADC reading from the specified `channel` on an `ads` ic and return the ADC reading
 """
-function set_and_read_ADS1x15(pi::Pi, ads::ADS1x15, os::ADS1x15_Config_OS=OS_STRTSINGLE,
-  mux::ADS1x15_Config_MUX=MUX_DIFF_0_1,
-  pga::ADS1x15_Config_PGA=PGA_2_048V,
-  mode::ADS1x15_Config_MODE=MODE_SINGLE,
-  dr::ADS1x15_Config_DR=DR_1600SPS,
-  comp_mode::ADS1x15_Config_COMPMODE=COMPMODE_TRAD,
-  comp_pol::ADS1x15_Config_COMPPOL=COMPPOL_ACTIVELOW,
-  comp_lat::ADS1x15_Config_COMPLAT=COMPLAT_NONLAT,
-  comp_que::ADS1x15_Config_COMPQUE=COMPQUE_NONE)
+function set_and_read_ADS1x15(pi::Pi, ads::ADS1x15, os::Symbol=:STARTSINGLE,
+  mux::Symbol=:DIFF_0_1,
+  pga::Symbol=:V2_048,
+  mode::Symbol=:SINGLE,
+  dr::Symbol=:SPS1600,
+  compmode::Symbol=:TRAD,
+  comppol::Symbol=:ACTIVELOW,
+  complat::Symbol=:NONLAT,
+  compque::Symbol=:NONE)
 
-  config = UInt16(os) | UInt16(mux) | UInt16(pga) | UInt16(mode) | UInt16(dr) | UInt16(comp_mode) | UInt16(comp_pol) | UInt16(comp_lat) | UInt16(comp_que)
-  write_register(pi, ads, UInt16(ADS1x15_POINTER_CONFIG), config)
+  global pointers
+  global config_os
+  global config_mux
+  global config_pga
+  global config_mode
+  global config_dr
+  global config_compmode
+  global config_comppol
+  global config_complat
+  global config_compque
 
+  config = config_os[os] | config_mux[mux] | config_pga[pga] | config_mode[mode] | config_dr[dr] |
+  config_compmode[compmode] | config_comppol[comppol] | config_complat[complat] | config_compque[compque]
+
+  write_register(pi, ads, pointers[:CONFIG], config)
   sleep(ads.conversion_delay)
 
-  result = read_register(pi, ads, UInt16(ADS1x15_POINTER_CONVERT)) >> ads.bit_shift
+  result = read_register(pi, ads, pointers[:CONVERT]) >> ads.bit_shift
   if ads.bit_shift != 0 && mux <= 0x3000 && result > 0x07FF
     result |= 0xF000 # Move sign to 16th bit in case of negative differential values
   end
@@ -165,7 +186,8 @@ Set the low or high (see boolean `write_low_thld`) comperator alert threshold to
 Use function [`enable_conv_rdy_alert`](@ref) in order to enable a alert pin changes on newly available conversion results.
 """
 function set_threshold_alert(pi::Pi, ads::ADS1x15, thld_value::Number, write_low_thld::Bool=true)
-  register = write_low_thld ? UInt16(ADS1x15_POINTER_LOWTHRESH) : UInt16(ADS1x15_POINTER_HITHRESH)
+  global pointers
+  register = write_low_thld ? pointers[:LOWTHRESH] : pointers[:HITHRESH]
   return write_register(pi, ads, register, thld_value << ads.bit_shift)
 end
 
@@ -175,8 +197,9 @@ end
 Enable alert pin changes on newly available conversion results.
 """
 function enable_conv_rdy_alert(pi::Pi, ads::ADS1x15)
-  write_register(pi, ads, UInt16(ADS1x15_POINTER_LOWTHRESH), 0x800)
-  write_register(pi, ads, UInt16(ADS1x15_POINTER_HITHRESH), 0x7ff)
+  global pointers
+  write_register(pi, ads, pointers[:LOWTHRESH], 0x800)
+  write_register(pi, ads, pointers[:HITHRESH], 0x7ff)
 end
 
 """
@@ -185,8 +208,9 @@ end
 Check if ADC is currenty performing a measurement.
 """
 function is_busy(pi::Pi, ads::ADS1x15)
-  os_mask = 0x8000
-  return read_register(pi, ads, UInt16(ADS1x15_POINTER_CONFIG)) & os_mask == UInt16(OS_BUSY)
+  global pointers
+  global config_os
+  return read_register(pi, ads, pointers[:CONFIG]) & config_os[:MASK_OS] == config_os[:BUSY]
 end
 
 end #module
