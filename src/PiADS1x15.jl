@@ -94,6 +94,8 @@ const config_compque = Dict(
   :NONE => 0x0003 # Disable the comparator and put ALERT/RDY to high impedance (default)
 )
 
+current_config = nothing # Current config register, needs to be set after startup
+
 abstract type ADS1x15 end
 
 mutable struct ADS1015 <: ADS1x15
@@ -167,11 +169,17 @@ function set_config(pi::Pi, ads::ADS1x15;
   global config_comppol
   global config_complat
   global config_compque
+  global current_config
 
   config = config_os[os] | config_mux[mux] | config_pga[pga] | config_mode[mode] | config_dr[dr] |
   config_compmode[compmode] | config_comppol[comppol] | config_complat[complat] | config_compque[compque]
 
-  return write_register(pi, ads, pointers[:CONFIG], config)
+  if write_register(pi, ads, pointers[:CONFIG], config) == 0
+    current_config = config # Save current config register
+    return true
+  else
+    return false
+  end
 end
 
 """
@@ -182,10 +190,16 @@ The config register needs to be set sepeartely beforehand using [`set_config`](@
 """
 function read_conv_result(pi::Pi, ads::ADS1x15)
   global pointers
-  sleep(ads.conversion_delay)
+  global config_mux
+  global current_config
 
+  if isnothing(current_config)
+    error("Config register needs to be set before reading values.")
+  end
+
+  sleep(ads.conversion_delay)
   result = read_register(pi, ads, pointers[:CONVERT]) >> ads.bit_shift
-  if ads.bit_shift != 0 && mux <= 0x3000 && result > 0x07FF
+  if ads.bit_shift != 0 && (current_config & config_mux[:MASK_MUX]) <= config_mux[:DIFF_2_3] && result > 0x07FF
     result |= 0xF000 # Move sign to 16th bit in case of negative differential values
   end
   return result
