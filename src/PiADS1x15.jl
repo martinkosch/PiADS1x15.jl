@@ -3,7 +3,7 @@ module PiADS1x15
 using PiGPIO
 
 export ADS1015, ADS1115
-export set_and_read_ADS1x15, set_threshold_alert, enable_conv_rdy_alert, is_busy
+export set_config, read_conv_result, set_threshold_alert, enable_conv_rdy_alert, is_busy
 
 # I2C Addresses
 const addresses = Dict(
@@ -141,11 +141,13 @@ function read_register(pi::Pi, ads::ADS1x15, register::Number)
 end
 
 """
-  set_and_read_ADS1x15(pi, ads [, os; mux, pga, mode, dr, comp_mode, comp_pol, comp_lat, comp_que])
+  set_config(pi, ads [, os; mux, pga, mode, dr, comp_mode, comp_pol, comp_lat, comp_que])
 
-Get a single-ended ADC reading from the specified `channel` on an `ads` ic and return the ADC reading
+Set the config register of a ADS1x15 device `ads` that is connected to a Raspberry Pi via a PiGPIO.jl object `pi`.
+The conversion results can be collected afterwards using [`read_conv_result`](@ref).
 """
-function set_and_read_ADS1x15(pi::Pi, ads::ADS1x15, os::Symbol=:STARTSINGLE,
+function set_config(pi::Pi, ads::ADS1x15;
+  os::Symbol=:STARTSINGLE,
   mux::Symbol=:DIFF_0_1,
   pga::Symbol=:V2_048,
   mode::Symbol=:SINGLE,
@@ -169,7 +171,17 @@ function set_and_read_ADS1x15(pi::Pi, ads::ADS1x15, os::Symbol=:STARTSINGLE,
   config = config_os[os] | config_mux[mux] | config_pga[pga] | config_mode[mode] | config_dr[dr] |
   config_compmode[compmode] | config_comppol[comppol] | config_complat[complat] | config_compque[compque]
 
-  write_register(pi, ads, pointers[:CONFIG], config)
+  return write_register(pi, ads, pointers[:CONFIG], config)
+end
+
+"""
+  read_conv_result(pi, ads)
+
+Get a conversion result from an ADS1x15 device connected to a Raspberry Pi via a PiGPIO.jl object `pi`.
+The config register needs to be set sepeartely beforehand using [`set_config`](@ref).
+"""
+function read_conv_result(pi::Pi, ads::ADS1x15)
+  global pointers
   sleep(ads.conversion_delay)
 
   result = read_register(pi, ads, pointers[:CONVERT]) >> ads.bit_shift
