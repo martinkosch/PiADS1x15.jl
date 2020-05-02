@@ -110,13 +110,13 @@ mutable struct ADS1115 <: ADS1x15
   bit_shift        # Bit shift
 end
 
-function ADS1015(pi::Pi, i2c_bus::Integer, i2c_address::Symbol)
+function ADS1015(pi::Pi, i2c_bus::Integer, i2c_address::Symbol=:GND)
   global addresses
   handle = PiGPIO.i2c_open(pi, i2c_bus, addresses[i2c_address])
   return ADS1015(handle, i2c_address, 1//1000, 4)
 end
 
-function ADS1115(pi::Pi, i2c_bus::Integer, i2c_address::Symbol)
+function ADS1115(pi::Pi, i2c_bus::Integer, i2c_address::Symbol=:GND)
   global addresses
   handle = PiGPIO.i2c_open(pi, i2c_bus, addresses[i2c_address])
   return ADS1115(handle, i2c_address, 9//1000, 0)
