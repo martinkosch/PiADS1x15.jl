@@ -193,7 +193,7 @@ function read_conv_result(pi::Pi, ads::ADS1x15)
   global config_mux
   global current_config
 
-  if isnothing(current_config)
+  if current_config == nothing
     error("Config register needs to be set before reading values.")
   end
 
